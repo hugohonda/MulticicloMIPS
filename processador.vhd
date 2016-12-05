@@ -1,0 +1,326 @@
+LIBRARY ieee;
+USE ieee.std_logic_1164.ALL;
+USE ieee.std_logic_signed.ALL;
+USE ieee.std_logic_unsigned.ALL;
+USE IEEE.STD_LOGIC_ARITH.ALL;
+USE IEEE.numeric_std.ALL;
+USE work.mips_pkg.ALL;
+ENTITY processador IS
+	GENERIC (
+		WORD_SIZE : NATURAL := 32;
+		INS_SIZE : NATURAL := 8
+	);
+	PORT (
+		clk : IN std_logic;
+		rst : IN std_logic;
+		tb_pc_out : OUT std_logic_vector(31 DOWNTO 0);
+		tb_inst_mem_in : OUT std_logic_vector(7 DOWNTO 0);
+		tb_inst_mem_out : OUT std_logic_vector(31 DOWNTO 0);
+		tb_breg_out_a_aux : OUT std_logic_vector(31 DOWNTO 0);
+		tb_log_imm_mux_out : OUT std_logic_vector(31 DOWNTO 0);
+		tb_alu_out : OUT std_logic_vector(31 DOWNTO 0);
+		tb_s_log_imm : OUT std_logic;
+		tb_wr_breg : OUT std_logic;
+		tb_alu_out_buf : OUT std_logic_vector(31 DOWNTO 0);
+		tb_mem_para_reg_out : OUT std_logic_vector(31 DOWNTO 0);
+		tb_imm_signalextend_out : OUT std_logic_vector(31 DOWNTO 0);
+		tb_decode_inst_mem : OUT std_logic_vector(31 DOWNTO 0);
+		tb_wr_ir : OUT std_logic;
+		tb_s_aluAin : OUT std_logic;
+		tb_s_datareg : OUT std_logic_vector(1 DOWNTO 0);
+		tb_s_aluBin : OUT std_logic_vector(1 DOWNTO 0);
+		tb_alu_a_in : OUT std_logic_vector(31 DOWNTO 0);
+		tb_alu_b_in : OUT std_logic_vector(31 DOWNTO 0);
+		tb_breg_out_b_aux : OUT std_logic_vector(31 DOWNTO 0);
+		tb_imm_signalextend_shiffted_temp : OUT std_logic_vector(31 DOWNTO 0);
+		tb_alu_ctrl_out : OUT std_logic_vector(3 DOWNTO 0);
+		tb_op_alu : OUT std_logic_vector(2 DOWNTO 0);
+		tb_opcode : OUT std_logic_vector(5 DOWNTO 0);
+		tb_s_Pcin : OUT std_logic_vector(1 DOWNTO 0);
+		tb_bgez_out : OUT std_logic_vector(31 DOWNTO 0);
+		tb_bltz_temp : OUT std_logic_vector(31 DOWNTO 0);
+		tb_funct : OUT std_logic_vector(5 DOWNTO 0);
+		tb_shamt : OUT std_logic_vector(4 DOWNTO 0);
+		tb_logical_sel : OUT std_logic;
+		tb_s_is_bgez : OUT std_logic
+	);
+END ENTITY;
+ARCHITECTURE behav OF processador IS
+	SIGNAL pc_out, inst_mem_out, decode_inst_mem, data_mem_reg_out, mem_para_reg_out, imm_signalextend_shiffted_temp : std_logic_vector(WORD_SIZE - 1 DOWNTO 0);
+	SIGNAL breg_out_a, breg_out_b, breg_out_a_aux, breg_out_b_aux, imm_signalextend_out : std_logic_vector(WORD_SIZE - 1 DOWNTO 0);
+	SIGNAL imm_signalextend_shiffted : std_logic_vector(WORD_SIZE - 1 DOWNTO 0);
+	SIGNAL reg_dst_out : std_logic_vector(4 DOWNTO 0);
+	SIGNAL alu_a_in, alu_b_in, alu_out, alu_out_buf : std_logic_vector(WORD_SIZE - 1 DOWNTO 0);
+	SIGNAL orig_pc_out, alu_temp : std_logic_vector(WORD_SIZE - 1 DOWNTO 0);
+	SIGNAL inst_mem_in : std_logic_vector(INS_SIZE - 1 DOWNTO 0);
+	SIGNAL wr_ir, wr_pc, wr_mem, is_beq, is_bne, s_datare, s_mem_add, wr_breg, s_reg_add : std_logic;
+	SIGNAL s_datareg : std_logic_vector(1 DOWNTO 0);
+	SIGNAL s_aluAin : std_logic;
+	SIGNAL alu_zero, pc_temp : std_logic;
+	SIGNAL s_aluBin, s_PCin : std_logic_vector (1 DOWNTO 0);
+	SIGNAL op_alu : std_logic_vector (2 DOWNTO 0);
+	SIGNAL alu_ctrl_out : std_logic_vector(3 DOWNTO 0);
+	SIGNAL log_signalextend_out : std_logic_vector(31 DOWNTO 0);
+	SIGNAL log_imm_mux_out : std_logic_vector(31 DOWNTO 0);
+	SIGNAL s_log_imm : std_logic;
+	SIGNAL s_is_bgez : std_logic;
+	SIGNAL s_bgez_bltz : std_logic;
+	SIGNAL logical_sel : std_logic;
+	SIGNAL shamt_temp : std_logic_vector(31 DOWNTO 0);
+	SIGNAL bgez_temp : std_logic_vector(31 DOWNTO 0);
+	SIGNAL bgez_out : std_logic_vector(31 DOWNTO 0);
+	SIGNAL alu_zero_temp : std_logic_vector(31 DOWNTO 0);
+	SIGNAL bltz_temp : std_logic_vector(31 DOWNTO 0);
+	SIGNAL bgez_bltz_out : std_logic_vector(31 DOWNTO 0);
+	SIGNAL shamt_out : std_logic_vector(31 DOWNTO 0);
+	SIGNAL aux_muxMem : std_logic_vector(7 DOWNTO 0);
+	SIGNAL aux_muxB : std_logic_vector(31 DOWNTO 0);
+	SIGNAL aux_muxPC : std_logic_vector(31 DOWNTO 0);
+BEGIN
+	tb_pc_out <= pc_out;
+	tb_inst_mem_in <= inst_mem_in;
+	tb_inst_mem_out <= inst_mem_out;
+	tb_breg_out_a_aux <= breg_out_a_aux;
+	tb_log_imm_mux_out <= log_imm_mux_out;
+	tb_alu_out <= alu_out;
+	tb_s_log_imm <= s_log_imm;
+	tb_alu_out_buf <= alu_out_buf;
+	tb_mem_para_reg_out <= mem_para_reg_out;
+	tb_wr_breg <= wr_breg;
+	tb_imm_signalextend_out <= imm_signalextend_out;
+	tb_decode_inst_mem <= decode_inst_mem;
+	tb_wr_ir <= wr_ir;
+	tb_s_aluAin <= s_aluAin;
+	tb_s_datareg <= s_datareg;
+	tb_s_aluBin <= s_aluBin;
+	tb_alu_a_in <= alu_a_in;
+	tb_alu_b_in <= alu_b_in;
+	tb_breg_out_b_aux <= breg_out_b_aux;
+	tb_imm_signalextend_shiffted_temp <= imm_signalextend_shiffted_temp;
+	tb_alu_ctrl_out <= alu_ctrl_out;
+	tb_op_alu <= op_alu;
+	tb_opcode <= decode_inst_mem(31 DOWNTO 26);
+	tb_s_Pcin <= s_PCin;
+	tb_bgez_out <= bgez_out;
+	tb_bltz_temp <= bltz_temp;
+	tb_s_is_bgez <= s_is_bgez;
+	tb_shamt <= decode_inst_mem(10 DOWNTO 6);
+	tb_funct <= decode_inst_mem(5 DOWNTO 0);
+	tb_logical_sel <= logical_sel;
+	pc_temp <= wr_pc OR (bgez_out(0) AND (is_beq OR is_bne));
+	imm_signalextend_shiffted_temp <= imm_signalextend_out(29 DOWNTO 0) & "00";
+	alu_temp <= "00000" & decode_inst_mem(24 DOWNTO 0) & "00";
+	bgez_temp <= X"0000000" & "000" & NOT alu_a_in(31);
+	bltz_temp <= X"0000000" & "000" & alu_a_in(31);
+	alu_zero_temp <= X"0000000" & "000" & alu_zero;
+	shamt_temp <= X"000000" & "000" & decode_inst_mem(10 DOWNTO 6);
+	
+	PC : reg
+	PORT MAP(
+		clk => clk,
+		enable => pc_temp,
+		rst => rst,
+		sr_in => orig_pc_out,
+		sr_out => pc_out
+	);
+	
+	aux_muxMem <= ('1' & alu_out(8 downto 2)); -- converte endereço calculado na outSaidaALU para 8 bits de endereço
+	PC_MUX : mux_2 	GENERIC MAP	(SIZE => 8)
+	PORT MAP(
+		in0 => pc_out(9 downto 2),
+		in1 => aux_muxMem,
+		sel => s_mem_add,
+		m_out => inst_mem_in
+	);
+	
+	INST_MEM : mips_mem
+	PORT MAP(
+		address => inst_mem_in,
+		clk => clk,
+		data => breg_out_b_aux,
+		wren => wr_mem,
+		q => inst_mem_out
+	);
+	
+	INST_REG : reg
+	PORT MAP(
+		clk => clk,
+		enable => wr_ir,
+		rst => rst,
+		sr_in => inst_mem_out,
+		sr_out => decode_inst_mem
+	);
+	
+	DATA_MEM_REG : reg
+	PORT MAP(
+		clk => clk,
+		enable => '1',
+		rst => rst,
+		sr_in => inst_mem_out,
+		sr_out => data_mem_reg_out
+	);
+	
+	RegDst_MUX : mux_2_regdst
+	PORT MAP(
+		in0 => decode_inst_mem(20 DOWNTO 16),
+		in1 => decode_inst_mem(15 DOWNTO 11),
+		sel => s_reg_add,
+		m_out => reg_dst_out
+	);
+	
+	aux_muxPC <= (pc_out(31 downto 28) & data_mem_reg_out(25 downto 0) & "00");
+	MemparaReg_MUX : mux_3
+	PORT MAP(
+		in0 => alu_out_buf,
+		in1 => aux_muxPC, --data_mem_reg_out,
+		in2 => alu_out,
+		sel => s_datareg,
+		m_out => mem_para_reg_out
+	);
+	
+	BREG : registerbank
+	PORT MAP(
+		clk => clk,
+		enable => wr_breg,
+		idxA => decode_inst_mem(25 DOWNTO 21),
+		idxB => decode_inst_mem(20 DOWNTO 16),
+		idxwr => reg_dst_out,
+		data_in => mem_para_reg_out,
+		regA => breg_out_a,
+		regB => breg_out_b
+	);
+	
+	A_REG : regbuf
+	PORT MAP(
+		clk => clk,
+		sr_in => breg_out_a,
+		sr_out => breg_out_a_aux
+	);
+	
+	B_REG : regbuf
+	PORT MAP(
+		clk => clk,
+		sr_in => breg_out_b,
+		sr_out => breg_out_b_aux
+	);
+	
+	IMM_SIGNALEXTEND : extsgn
+	PORT MAP(
+		input => decode_inst_mem(15 DOWNTO 0),
+		output => imm_signalextend_out
+	);
+	
+	LOG_SIGNALEXTEND : logextsgn
+	PORT MAP(
+		input => decode_inst_mem(15 DOWNTO 0),
+		output => log_signalextend_out
+	);
+	
+	LOG_IMM_MUX : mux_2
+	PORT MAP(
+		in0 => imm_signalextend_out,
+		in1 => log_signalextend_out,
+		sel => s_log_imm,
+		m_out => log_imm_mux_out
+	);
+	
+	ORIGAALU : mux_2
+	PORT MAP(
+		in0 => pc_out,
+		in1 => shamt_out,
+		sel => s_aluAin,
+		m_out => alu_a_in
+	);
+	
+	aux_muxB <= (imm_signalextend_shiffted_temp(29 downto 0) & "00"); -- shift left 2
+	ORIGBALU : mux_4
+	PORT MAP(
+		in0 => breg_out_b_aux,
+		in1 => X"00000004", -- caso PC+4
+		in2 => aux_muxB,
+		in3 => imm_signalextend_shiffted_temp,
+		sel => s_aluBin,
+		m_out => alu_b_in
+	);
+	
+	MULTI_CYCLE_CONTROL : mips_control
+	PORT MAP(
+		clk => clk,
+		rst => rst,
+		opcode => decode_inst_mem(31 DOWNTO 26),
+		wr_ir => wr_ir,
+		wr_pc => wr_pc,
+		wr_mem => wr_mem,
+		is_beq => is_beq,
+		is_bne => is_bne,
+		s_datareg => s_datareg,
+		op_alu => op_alu,
+		s_mem_add => s_mem_add,
+		s_PCin => s_PCin,
+		s_aluAin => s_aluAin,
+		s_aluBin => s_aluBin,
+		wr_breg => wr_breg,
+		s_reg_add => s_reg_add,
+		s_log_imm => s_log_imm,
+		s_is_bgez => s_is_bgez
+	);
+	
+	ULA : ulamips
+	PORT MAP(
+		aluctl => alu_ctrl_out,
+		A => alu_a_in,
+		B => alu_b_in,
+		aluout => alu_out,
+		zero => alu_zero
+	);
+	
+	ULA_OUT : regbuf
+	PORT MAP(
+		clk => clk,
+		sr_in => alu_out,
+		sr_out => alu_out_buf
+	);
+	
+	--aux_muxPC <= (pc_out(31 downto 28) & data_mem_reg_out(25 downto 0) & "00");
+	ORIG_PC : mux_3
+	PORT MAP(
+		in0 => alu_out,
+		in1 => alu_out_buf,
+		in2 => alu_temp,
+		sel => s_Pcin,
+		m_out => orig_pc_out
+	);
+	
+	ALU_CTRL : alu_control
+	PORT MAP(
+		op_alu => op_alu,
+		funct => decode_inst_mem(5 DOWNTO 0),
+		alu_ctr => alu_ctrl_out,
+		logical_sel => logical_sel
+	);
+	
+	BGEZ_MUX : mux_2
+	PORT MAP(
+		in0 => alu_zero_temp,
+		in1 => bgez_bltz_out,
+		sel => s_is_bgez,
+		m_out => bgez_out
+	);
+	
+	BGEZ_OR_BLTZ_MUX : mux_2
+	PORT MAP(
+		in0 => bltz_temp,
+		in1 => bgez_temp,
+		sel => decode_inst_mem(16),
+		m_out => bgez_bltz_out
+	);
+	
+	SHAMT_MUX : mux_2
+	PORT MAP(
+		in0 => breg_out_a_aux,
+		in1 => shamt_temp,
+		sel => logical_sel,
+		m_out => shamt_out
+	);
+	
+END ARCHITECTURE;

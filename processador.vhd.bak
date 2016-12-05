@@ -1,0 +1,303 @@
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.std_logic_signed.all;
+use ieee.std_logic_unsigned.all;
+use IEEE.STD_LOGIC_ARITH.all;
+USE IEEE.numeric_std.ALL;
+use work.mips_pkg.all;
+
+entity processador is
+	generic (
+		WORD_SIZE 	: natural := 32;
+		INS_SIZE	: natural := 8
+	);
+	port (
+		clk		    						: in std_logic;
+		rst									: in std_logic;
+		pc_out_test 						: out std_logic_vector(31 downto 0);
+		inst_mem_in_test 					: out std_logic_vector(7 downto 0);
+		inst_mem_out_test					: out std_logic_vector(31 downto 0);
+		breg_out_a_aux_test					: out std_logic_vector(31 downto 0);
+		log_imm_mux_out_test				: out std_logic_vector(31 downto 0);
+		alu_out_test						: out std_logic_vector(31 downto 0);
+		s_log_imm_test						: out std_logic;
+		wr_breg_test						: out std_logic;
+		alu_out_buf_test					: out std_logic_vector(31 downto 0);
+		mem_para_reg_out_test				: out std_logic_vector(31 downto 0);
+		imm_signalextend_out_test			: out std_logic_vector(31 downto 0);
+		decode_inst_mem_test				: out std_logic_vector(31 downto 0);
+		wr_ir_test							: out std_logic;
+		s_aluAin_test						: out std_logic;
+		s_datareg_test						: out std_logic_vector(1 downto 0);
+		s_aluBin_test						: out std_logic_vector(1 downto 0);
+		alu_a_in_test						: out std_logic_vector(31 downto 0);
+		alu_b_in_test						: out std_logic_vector(31 downto 0);
+		breg_out_b_aux_test					: out std_logic_vector(31 downto 0);
+		imm_signalextend_shiffted_temp_test	: out std_logic_vector(31 downto 0);
+		alu_ctrl_out_test					: out std_logic_vector(3 downto 0);
+		op_alu_test							: out std_logic_vector(2 downto 0);
+		opcode_test							: out std_logic_vector(5 downto 0);
+		s_Pcin_test							: out std_logic_vector(1 downto 0);
+		bgez_out_test						: out std_logic_vector(31 downto 0);
+		bltz_temp_test						: out std_logic_vector(31 downto 0);
+		funct_test							: out std_logic_vector(5 downto 0);
+		shamt_test							: out std_logic_vector(4 downto 0);
+		logical_sel_test					: out std_logic;
+		s_is_bgez_test						: out std_logic
+	);
+end entity;
+
+--------------------------------------------------------------
+architecture behav of processador is
+--------------------------------------------------------------
+-- These are intermedite signal inside processor
+signal pc_out, inst_mem_out, decode_inst_mem, data_mem_reg_out, mem_para_reg_out, imm_signalextend_shiffted_temp : std_logic_vector(WORD_SIZE - 1 downto 0);
+signal breg_out_a, breg_out_b, breg_out_a_aux, breg_out_b_aux, imm_signalextend_out : std_logic_vector(WORD_SIZE - 1 downto 0);
+signal imm_signalextend_shiffted : std_logic_vector(WORD_SIZE - 1 downto 0);
+signal reg_dst_out : std_logic_vector(4 downto 0);
+signal alu_a_in, alu_b_in, alu_out, alu_out_buf : std_logic_vector(WORD_SIZE - 1 downto 0);
+signal orig_pc_out, alu_temp : std_logic_vector(WORD_SIZE - 1 downto 0);
+signal inst_mem_in : std_logic_vector(INS_SIZE - 1 downto 0);
+-- intermedite signais of mult cycle control
+signal wr_ir, wr_pc, wr_mem, is_beq, is_bne, s_datare, s_mem_add, wr_breg, s_reg_add : std_logic;
+signal s_datareg : std_logic_vector(1 downto 0);
+signal s_aluAin : std_logic;
+signal alu_zero, pc_temp : std_logic;
+signal s_aluBin, s_PCin : std_logic_vector (1 DOWNTO 0);
+signal op_alu : std_logic_vector (2 downto 0);
+signal alu_ctrl_out	 : std_logic_vector(3 downto 0);
+-- signals
+signal log_signalextend_out	: std_logic_vector(31 downto 0);
+signal log_imm_mux_out		: std_logic_vector(31 downto 0);
+signal s_log_imm			: std_logic;
+signal s_is_bgez			: std_logic;
+signal s_bgez_bltz			: std_logic;
+signal logical_sel			: std_logic;
+signal shamt_temp			: std_logic_vector(31 downto 0);
+signal bgez_temp			: std_logic_vector(31 downto 0);
+signal bgez_out				: std_logic_vector(31 downto 0);
+signal alu_zero_temp		: std_logic_vector(31 downto 0);
+signal bltz_temp			: std_logic_vector(31 downto 0);
+signal bgez_bltz_out		: std_logic_vector(31 downto 0);
+signal shamt_out			: std_logic_vector(31 downto 0);
+
+BEGIN
+	-- output ports
+	pc_out_test <= pc_out;
+	inst_mem_in_test <= inst_mem_in;
+	inst_mem_out_test <= inst_mem_out;
+	breg_out_a_aux_test <= breg_out_a_aux;
+	log_imm_mux_out_test <= log_imm_mux_out;
+	alu_out_test <= alu_out;
+	s_log_imm_test <= s_log_imm;
+	alu_out_buf_test <= alu_out_buf;
+	mem_para_reg_out_test <= mem_para_reg_out;
+	wr_breg_test <= wr_breg;
+	imm_signalextend_out_test <= imm_signalextend_out;
+	decode_inst_mem_test <= decode_inst_mem;
+	wr_ir_test <= wr_ir;
+	s_aluAin_test <= s_aluAin;
+	s_datareg_test <= s_datareg;
+	s_aluBin_test <= s_aluBin;
+	alu_a_in_test <= alu_a_in;
+	alu_b_in_test <= alu_b_in;
+	breg_out_b_aux_test <= breg_out_b_aux;
+	imm_signalextend_shiffted_temp_test <= imm_signalextend_shiffted_temp;
+	alu_ctrl_out_test <= alu_ctrl_out;
+	op_alu_test <= op_alu;
+	opcode_test <= decode_inst_mem(31 downto 26);
+	s_Pcin_test <= s_PCin;
+	bgez_out_test <= bgez_out;
+	bltz_temp_test <= bltz_temp;
+	s_is_bgez_test <= s_is_bgez;
+	shamt_test <= decode_inst_mem(10 downto 6);
+	funct_test <= decode_inst_mem(5 downto 0);
+	logical_sel_test <= logical_sel;
+	-- signals that stores temp
+	pc_temp <= wr_pc or (bgez_out(0) and (is_beq or is_bne));
+	imm_signalextend_shiffted_temp <= imm_signalextend_out(29 downto 0) & "00";
+	alu_temp <= "00000" & decode_inst_mem(24 downto 0) & "00";
+	bgez_temp <= X"0000000" & "000" & not alu_a_in(31);
+	bltz_temp <= X"0000000" & "000" & alu_a_in(31);
+	alu_zero_temp <= X"0000000" & "000" & alu_zero;
+	shamt_temp <= X"000000" & "000" & decode_inst_mem(10 downto 6);
+	-- pc
+	PC: reg port map (
+		clk => clk,
+		enable => pc_temp,
+		rst => rst,
+		sr_in => orig_pc_out,
+		sr_out => pc_out
+	);
+	-- louID
+	PC_MUX: mem_addr port map (
+		in0 => pc_out,
+		in1 => alu_out_buf,-- saida alu
+		sel => s_mem_add,-- louD
+		m_out => inst_mem_in
+	);
+	-- memória de instrução
+	INST_MEM: mips_mem port map (
+		address	=> inst_mem_in,
+		clk		=> clk,
+		data		=> breg_out_b_aux,-- data saida da alu
+		wren		=> wr_mem,-- write enable do control mips
+		q			=> inst_mem_out
+	);
+	-- registrador de instrução
+	INST_REG: reg port map (
+		clk => clk,
+		enable => wr_ir,-- controle escreveIR
+		rst => rst,
+		sr_in => inst_mem_out,
+		sr_out => decode_inst_mem
+	);
+	-- registrador de dados de memória
+	DATA_MEM_REG: reg port map (
+		clk => clk,
+		enable => '1',
+		rst => rst,
+		sr_in => inst_mem_out,
+		sr_out => data_mem_reg_out
+	);
+	-- MUX RegDST
+	RegDst_MUX: mux_2_regdst port map (
+		in0		=> decode_inst_mem(20 downto 16),
+		in1		=> decode_inst_mem(15 downto 11),
+		sel		=> s_reg_add,
+		m_out		=> reg_dst_out
+	);
+	-- MemparaReg MUX
+	MemparaReg_MUX: mux_3 port map (
+		in0		=> alu_out_buf,
+		in1		=> data_mem_reg_out,
+		in2 		=> alu_out,
+		sel		=> s_datareg,
+		m_out		=> mem_para_reg_out
+	);
+	-- banco de registradores
+	BREG: registerbank port map (
+		clk		=> clk,
+		enable	=> wr_breg,-- controle do banco de registrador
+		idxA		=> decode_inst_mem(25 downto 21),
+		idxB		=> decode_inst_mem(20 downto 16),
+		idxwr		=> reg_dst_out, -- mux reg dst
+		data_in	=> mem_para_reg_out,-- dados a serem escritos
+		regA 		=> breg_out_a,
+		regB 		=> breg_out_b
+	);
+	--	-- registrador auxiliar de A
+	A_REG: regbuf port map (
+		clk		=> clk,
+		sr_in	   => breg_out_a,
+		sr_out	=> breg_out_a_aux
+	);
+	-- registrador auxiliar de A
+	B_REG: regbuf port map (
+		clk		=> clk,
+		sr_in	   => breg_out_b,
+		sr_out	=> breg_out_b_aux
+	);
+	-- extende sinal aritmetico
+	IMM_SIGNALEXTEND: extsgn port map (
+		input	=> decode_inst_mem(15 downto 0), 
+		output => imm_signalextend_out
+	);
+	-- extende sinal logiacamente
+	LOG_SIGNALEXTEND: logextsgn port map (
+		input	=> decode_inst_mem(15 downto 0), 
+		output => log_signalextend_out
+	);
+	-- LOG_IMM mux
+	LOG_IMM_MUX: mux_2 port map (
+		in0		=> imm_signalextend_out,
+		in1		=> log_signalextend_out,
+		sel		=> s_log_imm,
+		m_out		=> log_imm_mux_out
+	);
+	-- mux origin A ALU OrigAALU
+	ORIGAALU: mux_2 port map(
+		in0 => pc_out,
+		in1 => shamt_out,
+		sel => s_aluAin,
+		m_out	=> alu_a_in
+	);
+	-- mux origin B ALU
+	ORIGBALU: mux_4 port map(
+		in0 => breg_out_b_aux,
+		in1 => X"00000001",
+		in2 => log_imm_mux_out,
+		in3 => imm_signalextend_shiffted_temp,-- extensao do sinal mais deslocamente de 2 a direita
+		sel => s_aluBin,--s_aluBin,
+		m_out	=> alu_b_in
+	);
+	-- controle de dados do mips
+	MULTI_CYCLE_CONTROL: mips_control port map (
+		clk			=> clk,
+		rst			=> rst,
+		opcode		=> decode_inst_mem(31 downto 26),
+		wr_ir		=> wr_ir,
+		wr_pc		=> wr_pc,
+		wr_mem		=> wr_mem,
+		is_beq		=> is_beq,
+		is_bne		=> is_bne,
+		s_datareg	=> s_datareg,
+		op_alu		=> op_alu,
+		s_mem_add	=> s_mem_add,
+		s_PCin		=> s_PCin,
+		s_aluAin 	=> s_aluAin,
+		s_aluBin 	=> s_aluBin,
+		wr_breg		=> wr_breg,
+		s_reg_add	=> s_reg_add,
+		s_log_imm	=> s_log_imm,
+		s_is_bgez	=> s_is_bgez
+	);
+	-- mips alu
+	ULA: ulamips port map (
+		aluctl		=> alu_ctrl_out, -- aluctl
+		A				=> alu_a_in,
+		B				=> alu_b_in,
+		aluout		=> alu_out,
+		zero  		=> alu_zero
+	);
+	-- saidaALU
+	ULA_OUT: regbuf port map (
+		clk		=> clk,
+		sr_in	   => alu_out,
+		sr_out	=> alu_out_buf
+	);
+	-- mux OrigPC
+	ORIG_PC: mux_3 port map (
+		in0 			=> alu_out, 
+		in1			=> alu_out_buf,
+		in2			=> alu_temp,
+		sel			=> s_Pcin,
+		m_out			=> orig_pc_out
+	);
+	-- controle de alu
+	ALU_CTRL: alu_control port map (
+		op_alu		=> op_alu, -- OpAlu
+		funct			=> decode_inst_mem(5 downto 0),
+		alu_ctr	   => alu_ctrl_out,
+		logical_sel => logical_sel
+	);
+	-- BGEZ mux
+	BGEZ_MUX: mux_2 port map (
+		in0 => alu_zero_temp,
+		in1 => bgez_bltz_out,
+		sel => s_is_bgez,
+		m_out	=> bgez_out
+	);
+	BGEZ_OR_BLTZ_MUX: mux_2 port map (
+		in0 => bltz_temp,
+		in1 => bgez_temp,
+		sel => decode_inst_mem(16),
+		m_out => bgez_bltz_out
+	);
+	SHAMT_MUX: mux_2 port map (
+		in0 => breg_out_a_aux,
+		in1 => shamt_temp,
+		sel => logical_sel,
+		m_out => shamt_out
+	);
+end architecture;
