@@ -157,23 +157,6 @@ PACKAGE mips_pkg IS
 			zero : OUT std_logic
 		);
 	END COMPONENT;
-	COMPONENT breg IS
-		GENERIC (
-			SIZE : NATURAL := WORD_SIZE;
-			ADDR : NATURAL := BREG_IDX
-		);
-		PORT
-		(
-		clk : IN std_logic;
-		enable : IN std_logic;
-		idxA : IN std_logic_vector(ADDR - 1 DOWNTO 0);
-		idxB : IN std_logic_vector(ADDR - 1 DOWNTO 0);
-		idxwr : IN std_logic_vector(ADDR - 1 DOWNTO 0);
-		data_in : IN std_logic_vector(SIZE - 1 DOWNTO 0);
-		regA : OUT std_logic_vector(SIZE - 1 DOWNTO 0);
-		regB : OUT std_logic_vector(SIZE - 1 DOWNTO 0)
-		);
-	END COMPONENT;
 	COMPONENT alu_ctr IS
 		PORT (
 			op_alu : IN std_logic_vector(1 DOWNTO 0);
