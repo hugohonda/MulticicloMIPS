@@ -175,7 +175,7 @@ PACKAGE mips_pkg IS
 		is_beq : OUT std_logic;
 		is_bne : OUT std_logic;
 		s_datareg : OUT std_logic_vector (1 DOWNTO 0);
-		op_alu : OUT std_logic_vector (2 DOWNTO 0);
+		op_alu : OUT std_logic_vector (1 DOWNTO 0);
 		s_mem_add : OUT std_logic;
 		s_PCin : OUT std_logic_vector (1 DOWNTO 0);
 		s_aluAin : OUT std_logic;
@@ -269,7 +269,7 @@ PACKAGE mips_pkg IS
 	COMPONENT alu_controle IS
 		PORT
 		(
-		op_alu : IN std_logic_vector(2 DOWNTO 0);
+		op_alu : IN std_logic_vector(1 DOWNTO 0);
 		funct : IN std_logic_vector(5 DOWNTO 0);
 		alu_ctr : OUT std_logic_vector(3 DOWNTO 0);
 		logical_sel : OUT std_logic

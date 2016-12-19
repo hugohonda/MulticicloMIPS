@@ -28,7 +28,7 @@ SIGNAL tb_inst_mem_out : STD_LOGIC_VECTOR(31 DOWNTO 0);
 SIGNAL tb_log_imm_mux_out : STD_LOGIC_VECTOR(31 DOWNTO 0);
 SIGNAL tb_logical_sel : STD_LOGIC;
 SIGNAL tb_mem_para_reg_out : STD_LOGIC_VECTOR(31 DOWNTO 0);
-SIGNAL tb_op_alu : STD_LOGIC_VECTOR(2 DOWNTO 0);
+SIGNAL tb_op_alu : STD_LOGIC_VECTOR(1 DOWNTO 0);
 SIGNAL tb_s_aluAin : STD_LOGIC;
 SIGNAL tb_s_aluBin : STD_LOGIC_VECTOR(1 DOWNTO 0);
 SIGNAL tb_s_datareg : STD_LOGIC_VECTOR(1 DOWNTO 0);
@@ -60,7 +60,7 @@ COMPONENT multiciclo
 	tb_log_imm_mux_out : OUT STD_LOGIC_VECTOR(31 DOWNTO 0);
 	tb_logical_sel : OUT STD_LOGIC;
 	tb_mem_para_reg_out : OUT STD_LOGIC_VECTOR(31 DOWNTO 0);
-	tb_op_alu : OUT STD_LOGIC_VECTOR(2 DOWNTO 0);
+	tb_op_alu : OUT STD_LOGIC_VECTOR(1 DOWNTO 0);
 	tb_opcode : OUT STD_LOGIC_VECTOR(5 DOWNTO 0);
 	tb_pc_out : OUT STD_LOGIC_VECTOR(31 DOWNTO 0);
 	tb_s_aluAin : OUT STD_LOGIC;

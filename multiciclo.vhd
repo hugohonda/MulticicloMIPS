@@ -34,7 +34,7 @@ ENTITY multiciclo IS
 		tb_breg_out_b_aux : OUT std_logic_vector(31 DOWNTO 0);
 		tb_imm_signalextend_shiffted_temp : OUT std_logic_vector(31 DOWNTO 0);
 		tb_alu_ctrl_out : OUT std_logic_vector(3 DOWNTO 0);
-		tb_op_alu : OUT std_logic_vector(2 DOWNTO 0);
+		tb_op_alu : OUT std_logic_vector(1 DOWNTO 0);
 		tb_opcode : OUT std_logic_vector(5 DOWNTO 0);
 		tb_s_Pcin : OUT std_logic_vector(1 DOWNTO 0);
 		tb_bgez_out : OUT std_logic_vector(31 DOWNTO 0);
@@ -58,7 +58,7 @@ ARCHITECTURE behav OF multiciclo IS
 	SIGNAL s_aluAin : std_logic;
 	SIGNAL alu_zero, pc_temp : std_logic;
 	SIGNAL s_aluBin, s_PCin : std_logic_vector (1 DOWNTO 0);
-	SIGNAL op_alu : std_logic_vector (2 DOWNTO 0);
+	SIGNAL op_alu : std_logic_vector (1 DOWNTO 0);
 	SIGNAL alu_ctrl_out : std_logic_vector(3 DOWNTO 0);
 	SIGNAL log_signalextend_out : std_logic_vector(31 DOWNTO 0);
 	SIGNAL log_imm_mux_out : std_logic_vector(31 DOWNTO 0);

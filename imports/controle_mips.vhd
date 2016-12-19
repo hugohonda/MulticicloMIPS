@@ -14,7 +14,7 @@ ENTITY controle_mips IS
 		is_beq	: OUT std_logic;
 		is_bne	: OUT std_logic;
 		s_datareg: OUT std_logic_vector (1 DOWNTO 0);
-		op_alu	: OUT std_logic_vector (2 DOWNTO 0);
+		op_alu	: OUT std_logic_vector (1 DOWNTO 0);
 		s_mem_add: OUT std_logic;
 		s_PCin	: OUT std_logic_vector (1 DOWNTO 0);
 		s_aluAin : OUT std_logic;
@@ -46,13 +46,13 @@ reg: process(clk, rst)
 
 logic: process (opcode, pstate)
 	begin
-		wr_ir			<= '0';
-		wr_pc			<= '0';
+		wr_ir		<= '0';
+		wr_pc		<= '0';
 		wr_mem		<= '0';
 		wr_breg		<= '0';
 		is_beq 		<= '0';
 		is_bne 		<= '0';
-		op_alu		<= "000";
+		op_alu		<= "00";
 		s_datareg 	<= "00";
 		s_mem_add 	<= '0';
 		s_PCin		<= "00";
@@ -82,13 +82,13 @@ logic: process (opcode, pstate)
 								 s_mem_add <= '1';
 
 			when rtype_ex_st =>  s_aluAin <= '1';
-								 op_alu <= "010";
+								 op_alu <= "10";
 
 			when writereg_st =>  s_reg_add <= '1';
 								 wr_breg <= '1';
 
 			when branch_ex_st => s_aluAin <= '1';
-										op_alu <= "001";
+										op_alu <= "01";
 										s_PCin <= "01";
 										if opcode = iBEQ
 										then is_beq <= '1';
@@ -103,25 +103,25 @@ logic: process (opcode, pstate)
 
 			when logic_imm_ori_st =>
 								s_log_imm <= '1';
-								op_alu <= "100";
+								op_alu <= "10";
 								s_aluBin <= "10";
 								s_aluAin <= '1';
 
 			when logic_imm_andi_st =>
 								s_log_imm <= '1';
-								op_alu <= "101";
+								op_alu <= "10";
 								s_aluBin <= "10";
 								s_aluAin <= '1';
 
 			when slti_st =>
 								s_aluBin <= "10";
 								s_aluAin <= '1';
-								op_alu <= "110";
+								op_alu <= "10";
 								s_datareg <= "10";
 
 			when bgez_st =>
 							s_aluAin <= '1';
-							op_alu <= "000";
+							op_alu <= "00";
 							s_is_bgez <= '1';
 							s_aluBin <= "11";
 
